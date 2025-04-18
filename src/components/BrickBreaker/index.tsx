@@ -90,9 +90,9 @@ const BrickBreaker: React.FC = () => {
 
     // Initialize current level data and ball position on paddle
     const initialLevelData = initialLevels[level - 1] || null;
-    if (initialLevelData) {
+    if (initialLevelData && canvasRef.current) {
       initialLevelData.ball.x = initialLevelData.paddle.x + initialLevelData.paddle.width / 2;
-      initialLevelData.ball.y = canvasRef.current!.height - currentLevelData!.paddle.height - initialLevelData.ball.radius - 1;
+      initialLevelData.ball.y = canvasRef.current.height - initialLevelData.paddle.height - initialLevelData.ball.radius - 1;
     }
     setCurrentLevelData(initialLevelData);
   }, [level]);
@@ -397,3 +397,4 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
