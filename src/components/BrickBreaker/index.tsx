@@ -47,6 +47,7 @@ const BrickBreaker: React.FC = () => {
   const [gameState, setGameState] = useState<"start" | "playing" | "paused" | "gameover">("start");
   const [levels, setLevels] = useState<Level[]>([]); // Store levels
   const [currentLevelData, setCurrentLevelData] = useState<Level | null>(null);
+  const [isVibrating, setIsVibrating] = useState<boolean>(false);
 
   // Sound effect refs
   const paddleHitSoundRef = useRef<HTMLAudioElement>(null);
@@ -86,7 +87,14 @@ const BrickBreaker: React.FC = () => {
 
     const initialLevels = generateLevels();
     setLevels(initialLevels);
-    setCurrentLevelData(initialLevels[level - 1] || null);
+
+    // Initialize current level data and ball position on paddle
+    const initialLevelData = initialLevels[level - 1] || null;
+    if (initialLevelData) {
+      initialLevelData.ball.x = initialLevelData.paddle.x + initialLevelData.paddle.width / 2;
+      initialLevelData.ball.y = canvasRef.current!.height - currentLevelData!.paddle.height - initialLevelData.ball.radius - 1;
+    }
+    setCurrentLevelData(initialLevelData);
   }, [level]);
 
   useEffect(() => {
@@ -202,6 +210,7 @@ const BrickBreaker: React.FC = () => {
         currentLevelData.paddle.x -= currentLevelData.paddle.speed;
       }
 
+      // Move ball
       currentLevelData.ball.x += currentLevelData.ball.speed * Math.cos(currentLevelData.ball.angle);
       currentLevelData.ball.y += currentLevelData.ball.speed * Math.sin(currentLevelData.ball.angle);
 
@@ -226,20 +235,34 @@ const BrickBreaker: React.FC = () => {
 
       // Ball out of bounds
       if (currentLevelData.ball.y + currentLevelData.ball.radius > canvas.height) {
-        setLives(prevLives => {
-          const newLives = prevLives - 1;
-          if (newLives < 0) {
-            setGameState("gameover");
-            gameOverSound && gameOverSound.play(); // Play game over sound
-            return 0;
-          } else {
-            // Reset ball position after losing a life
-            currentLevelData.ball.x = canvas.width / 2;
-            currentLevelData.ball.y = canvas.height - 30;
-            currentLevelData.ball.angle = Math.PI / 6;
-            return newLives;
+        // Stop the ball immediately
+        currentLevelData.ball.speed = 0;
+
+        // Vibrate before losing life
+        if (!isVibrating) {
+          setIsVibrating(true);
+          if ('vibrate' in navigator) {
+            navigator.vibrate(500); // Vibrate for 500ms
           }
-        });
+          setTimeout(() => {
+            setIsVibrating(false);
+            setLives(prevLives => {
+              const newLives = prevLives - 1;
+              if (newLives < 0) {
+                setGameState("gameover");
+                gameOverSound && gameOverSound.play(); // Play game over sound
+                return 0;
+              } else {
+                // Reset ball position and angle after losing a life
+                currentLevelData.ball.x = currentLevelData.paddle.x + currentLevelData.paddle.width / 2;
+                currentLevelData.ball.y = canvas.height - currentLevelData.paddle.height - currentLevelData.ball.radius - 1;
+                currentLevelData.ball.angle = Math.PI / 6;
+                currentLevelData.ball.speed = levels[level - 1].ball.speed;
+                return newLives;
+              }
+            });
+          }, 500); // Delay to allow vibration
+        }
       }
 
       animationFrameId = requestAnimationFrame(gameLoop);
@@ -254,11 +277,15 @@ const BrickBreaker: React.FC = () => {
       document.removeEventListener("keyup", keyUpHandler, false);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [gameState, score, currentLevelData, lives]);
+  }, [gameState, score, currentLevelData, lives, isVibrating, level, levels]);
 
   const startGame = () => {
     if (currentLevelData) {
       currentLevelData.bricks.forEach(brick => brick.hit = false); // Reset bricks
+      // Ensure ball starts on the paddle
+      currentLevelData.ball.x = currentLevelData.paddle.x + currentLevelData.paddle.width / 2;
+      currentLevelData.ball.y = canvasRef.current!.height - currentLevelData.paddle.height - currentLevelData.ball.radius - 1;
+      currentLevelData.ball.speed = levels[level - 1].ball.speed;
     }
     setScore(0);
     setLives(3);
@@ -276,6 +303,10 @@ const BrickBreaker: React.FC = () => {
   const resetGame = () => {
     if (currentLevelData) {
       currentLevelData.bricks.forEach(brick => brick.hit = false); // Reset bricks
+      // Ensure ball starts on the paddle
+      currentLevelData.ball.x = currentLevelData.paddle.x + currentLevelData.paddle.width / 2;
+      currentLevelData.ball.y = canvasRef.current!.height - currentLevelData.paddle.height - currentLevelData.ball.radius - 1;
+      currentLevelData.ball.speed = levels[level - 1].ball.speed;
     }
     setScore(0);
     setLives(3);
@@ -287,6 +318,11 @@ const BrickBreaker: React.FC = () => {
     if (newLevel >= 1 && newLevel <= levels.length) {
       setLevel(newLevel);
       setCurrentLevelData(levels[newLevel - 1]);
+      // Ensure ball starts on the paddle when level changes
+      if (levels[newLevel - 1]) {
+          levels[newLevel - 1].ball.x = levels[newLevel - 1].paddle.x + levels[newLevel - 1].paddle.width / 2;
+          levels[newLevel - 1].ball.y = canvasRef.current!.height - levels[newLevel - 1].paddle.height - levels[newLevel - 1].ball.radius - 1;
+      }
       setGameState("start"); // or "playing" if you want to auto-start
     } else {
       alert(`سطح ${newLevel} دستیاب نہیں ہے۔`); // Level ${newLevel} is not available in Urdu
