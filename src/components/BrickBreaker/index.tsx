@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -224,6 +223,7 @@ const BrickBreaker: React.FC = () => {
             gameOverSound && gameOverSound.play(); // Play game over sound
             return 0;
           } else {
+            // Reset ball position after losing a life
             currentLevelData.ball.x = canvas.width / 2;
             currentLevelData.ball.y = canvas.height - 30;
             return newLives;
@@ -325,7 +325,7 @@ export default BrickBreaker;
 
 // Helper function to create bricks
 function createBricks(canvasWidth: number, canvasHeight: number, level: number, { rows, cols }: { rows: number; cols: number }): Brick[] {
-  const brickWidth = 75;
+  const brickWidth = Math.floor(canvasWidth / cols) - 10; // Adjust brickWidth calculation
   const brickHeight = 20;
   const padding = 10;
   const offsetTop = 50;
