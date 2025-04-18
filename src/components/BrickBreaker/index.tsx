@@ -203,6 +203,7 @@ const BrickBreaker: React.FC = () => {
       // Ball collision with walls
       if (currentLevelData.ball.x + currentLevelData.ball.radius > canvas.width || currentLevelData.ball.x - currentLevelData.ball.radius < 0) {
         currentLevelData.ball.angle = -currentLevelData.ball.angle;
+        currentLevelData.ball.angle = Math.PI - currentLevelData.ball.angle;
       }
       if (currentLevelData.ball.y - currentLevelData.ball.radius < 0) {
         currentLevelData.ball.angle = -currentLevelData.ball.angle;
@@ -350,3 +351,4 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
