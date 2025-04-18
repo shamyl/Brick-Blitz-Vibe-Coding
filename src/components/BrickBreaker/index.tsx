@@ -305,7 +305,7 @@ const BrickBreaker: React.FC = () => {
       currentLevelData.bricks.forEach(brick => brick.hit = false); // Reset bricks
       // Ensure ball starts on the paddle
       currentLevelData.ball.x = currentLevelData.paddle.x + currentLevelData.paddle.width / 2;
-      currentLevelData.ball.y = canvasRef.current!.height - currentLevelData.paddle.height - currentLevelData.ball.radius - 1;
+      currentLevelData.ball.y = canvasRef.current!.height - canvasRef.current!.paddle.height - currentLevelData.ball.radius - 1;
       currentLevelData.ball.speed = levels[level - 1].ball.speed;
     }
     setScore(0);
@@ -397,4 +397,5 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
 
