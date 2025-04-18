@@ -416,7 +416,3 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
-
-
-
-
