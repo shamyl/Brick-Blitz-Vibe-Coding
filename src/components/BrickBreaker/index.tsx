@@ -193,13 +193,10 @@ const BrickBreaker: React.FC = () => {
         leftPressed = true;
       }
 
-       if (e.code === "Space" && !ballLaunched) {
-            if(lives > 0) {
-              if (currentLevelData) {
-                currentLevelData.ball.speed = levels[level - 1].ball.speed;
-                setBallLaunched(true);
-              }
-
+       if (e.code === "Space" && !ballLaunched && lives > 0) {
+            if (currentLevelData) {
+              currentLevelData.ball.speed = levels[level - 1].ball.speed;
+              setBallLaunched(true);
             }
         }
     };
@@ -313,6 +310,7 @@ const BrickBreaker: React.FC = () => {
     setScore(0);
     setLives(3);
     setGameState("playing");
+    setBallLaunched(false)
   };
 
   const pauseGame = () => {
@@ -332,6 +330,7 @@ const BrickBreaker: React.FC = () => {
     setLives(3);
     setGameState("start");
     setCurrentLevelData(levels[0]);
+    setBallLaunched(false)
   };
 
   const handleLevelChange = (newLevel: number) => {
@@ -343,6 +342,7 @@ const BrickBreaker: React.FC = () => {
         resetBallPosition(levels[newLevel - 1]);
       }
       setGameState("start"); // or "playing" if you want to auto-start
+      setBallLaunched(false)
     } else {
       alert(`سطح ${newLevel} دستیاب نہیں ہے۔`); // Level ${newLevel} is not available in Urdu
     }
