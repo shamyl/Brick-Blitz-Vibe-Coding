@@ -195,8 +195,11 @@ const BrickBreaker: React.FC = () => {
 
        if (e.code === "Space" && !ballLaunched) {
             if(lives > 0) {
-              currentLevelData.ball.speed = levels[level - 1].ball.speed;
-              setBallLaunched(true);
+              if (currentLevelData) {
+                currentLevelData.ball.speed = levels[level - 1].ball.speed;
+                setBallLaunched(true);
+              }
+
             }
         }
     };
@@ -413,6 +416,7 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
+
 
 
 
