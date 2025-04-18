@@ -148,7 +148,12 @@ const BrickBreaker: React.FC = () => {
       currentLevelData.bricks.forEach(brick => {
         if (!brick.hit) {
           if (currentLevelData.ball.x > brick.x && currentLevelData.ball.x < brick.x + brick.width && currentLevelData.ball.y > brick.y && currentLevelData.ball.y < brick.y + brick.height) {
-            currentLevelData.ball.angle = -currentLevelData.ball.angle;
+            // Calculate new angle based on collision point
+            const collisionPoint = currentLevelData.ball.x - (brick.x + brick.width / 2);
+            const normalizedCollisionPoint = collisionPoint / (brick.width / 2);
+            const bounceAngle = normalizedCollisionPoint * (Math.PI / 3); // Max bounce angle of 60 degrees
+
+            currentLevelData.ball.angle = -currentLevelData.ball.angle + bounceAngle;
             brick.hit = true;
             setScore(prevScore => prevScore + brick.points);
             brickBreakSound && brickBreakSound.play(); // Play brick break sound
@@ -202,7 +207,6 @@ const BrickBreaker: React.FC = () => {
 
       // Ball collision with walls
       if (currentLevelData.ball.x + currentLevelData.ball.radius > canvas.width || currentLevelData.ball.x - currentLevelData.ball.radius < 0) {
-        currentLevelData.ball.angle = -currentLevelData.ball.angle;
         currentLevelData.ball.angle = Math.PI - currentLevelData.ball.angle;
       }
       if (currentLevelData.ball.y - currentLevelData.ball.radius < 0) {
@@ -211,7 +215,12 @@ const BrickBreaker: React.FC = () => {
 
       // Ball collision with paddle
       if (currentLevelData.ball.y + currentLevelData.ball.radius > canvas.height - currentLevelData.paddle.height && currentLevelData.ball.x > currentLevelData.paddle.x && currentLevelData.ball.x < currentLevelData.paddle.x + currentLevelData.paddle.width) {
-        currentLevelData.ball.angle = -currentLevelData.ball.angle;
+         // Calculate new angle based on collision point with the paddle
+        const paddleCollisionPoint = currentLevelData.ball.x - (currentLevelData.paddle.x + currentLevelData.paddle.width / 2);
+        const normalizedPaddleCollisionPoint = paddleCollisionPoint / (currentLevelData.paddle.width / 2);
+        const bounceAngle = normalizedPaddleCollisionPoint * (Math.PI / 3); // Adjust for desired bounce angle range
+    
+        currentLevelData.ball.angle = -Math.abs(Math.PI/2 + bounceAngle); //reverse direction and add angle
         paddleHitSound && paddleHitSound.play(); // Play paddle hit sound
       }
 
@@ -227,6 +236,7 @@ const BrickBreaker: React.FC = () => {
             // Reset ball position after losing a life
             currentLevelData.ball.x = canvas.width / 2;
             currentLevelData.ball.y = canvas.height - 30;
+            currentLevelData.ball.angle = Math.PI / 6;
             return newLives;
           }
         });
@@ -351,4 +361,3 @@ function getRandomColor(): string {
   const colors = ['red', 'green', 'yellow', 'orange'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
-
