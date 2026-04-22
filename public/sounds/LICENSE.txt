@@ -1,0 +1,19 @@
+Sound effects source (added online):
+
+- paddleHit.ogg
+- brickBreak.ogg
+- gameOver.ogg
+- gameStart.ogg
+
+Source: Kenney's Sound Pack mirror
+URL base: https://www.gamesounds.xyz/Kenney's%20Sound%20Pack/Retro%20Sounds%201/
+License: Creative Commons CC0 1.0 (Public Domain)
+Original creator: Kenney (https://www.kenney.nl)
+
+Files currently used in game:
+- paddleHit.ogg -> laser1.ogg
+- brickBreak.ogg -> pickup2.ogg
+- gameOver.ogg -> lose3.ogg
+- gameStart.ogg -> pickup1.ogg
+- lifeLost.ogg -> lose2.ogg
+- wallHit.ogg -> laser2.ogg

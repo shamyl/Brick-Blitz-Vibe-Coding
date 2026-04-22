@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button"
 
 // Define types
@@ -51,7 +50,6 @@ type GameState = "start" | "playing" | "paused" | "gameover";
 // Function to generate random colors for the bricks (defined below)
 
 const BrickBreaker: React.FC = () => {
-  const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [level, setLevel] = useState<number>(1);
   const [score, setScore] = useState<number>(0);
@@ -76,6 +74,15 @@ const BrickBreaker: React.FC = () => {
   const wallHitSoundRef = useRef<HTMLAudioElement>(null);
   const lifeLostSoundRef = useRef<HTMLAudioElement>(null);
   const gameOverSoundRef = useRef<HTMLAudioElement>(null);
+  const gameStartSoundRef = useRef<HTMLAudioElement>(null);
+
+  const playSound = useCallback((audio: HTMLAudioElement | null) => {
+    if (!audio) return;
+    audio.currentTime = 0;
+    void audio.play().catch(() => {
+      // Ignore play interruptions (e.g., rapid retriggers)
+    });
+  }, []);
 
   // Effect to keep gameStateRef synchronized with gameState
   useEffect(() => {
@@ -142,6 +149,7 @@ const BrickBreaker: React.FC = () => {
   // --- Game State Control Functions --- Moved Before Main useEffect ---
   const startGame = useCallback(() => {
        if (!levels[level - 1]) { console.error("Cannot start game: Level data not loaded yet."); return; }
+       playSound(gameStartSoundRef.current);
        setScore(0);
        setLives(3);
        setBallLaunched(false);
@@ -153,7 +161,7 @@ const BrickBreaker: React.FC = () => {
        setCurrentLevelData(newLevelData);
        resetBallAndPaddlePosition(newLevelData);
        setGameState("playing");
-  }, [level, levels, resetBallAndPaddlePosition]); // Added dependencies
+  }, [level, levels, resetBallAndPaddlePosition, playSound]); // Added dependencies
 
   const pauseGame = useCallback(() => {
       if (gameStateRef.current === "playing") {
@@ -260,7 +268,7 @@ const BrickBreaker: React.FC = () => {
                 currentLevelData.ball.y += (currentLevelData.ball.angle < 0 || currentLevelData.ball.angle > Math.PI) ? -1 : 1;
                 brick.hit = true;
                 setScore(prevScore => prevScore + brick.points);
-                brickBreakSound?.play();
+                playSound(brickBreakSound);
                 if (currentLevelData.bricks.every(b => b.hit)) {
                     allBricksHit = true;
                 }
@@ -275,7 +283,7 @@ const BrickBreaker: React.FC = () => {
             } else {
                 showMessage("آپ جیت گئے!");
                 setGameState("gameover");
-                gameOverSound?.play();
+                playSound(gameOverSound);
             }
         }
     };
@@ -288,12 +296,23 @@ const BrickBreaker: React.FC = () => {
     const keyDownHandler = (e: KeyboardEvent) => { if (e.key === "Right" || e.key === "ArrowRight") { rightPressed = true; } else if (e.key === "Left" || e.key === "ArrowLeft") { leftPressed = true; } else if (e.code === "Space") { e.preventDefault(); tryLaunchBall(); } else if (e.key === 'p' || e.key === 'P') { if (gameStateRef.current === "playing") { pauseGame(); } else if (gameStateRef.current === "paused") { resumeGame(); } } };
     const keyUpHandler = (e: KeyboardEvent) => { if (e.key === "Right" || e.key === "ArrowRight") { rightPressed = false; } else if (e.key === "Left" || e.key === "ArrowLeft") { leftPressed = false; } };
     const clickOrTouchHandler = (event: MouseEvent | TouchEvent) => { event.preventDefault(); tryLaunchBall(); };
+    const mouseMoveHandler = (event: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const mouseX = (event.clientX - rect.left) * scaleX;
+      const nextPaddleX = mouseX - currentLevelData.paddle.width / 2;
+      currentLevelData.paddle.x = Math.max(
+        0,
+        Math.min(canvas.width - currentLevelData.paddle.width, nextPaddleX)
+      );
+    };
 
     // Add event listeners
     document.addEventListener("keydown", keyDownHandler, false);
     document.addEventListener("keyup", keyUpHandler, false);
     canvas.addEventListener("click", clickOrTouchHandler, false);
     canvas.addEventListener("touchstart", clickOrTouchHandler, false);
+    canvas.addEventListener("mousemove", mouseMoveHandler, false);
 
 
     // --- Game Loop ---
@@ -339,12 +358,12 @@ const BrickBreaker: React.FC = () => {
         currentLevelData.ball.x = (currentLevelData.ball.x + currentLevelData.ball.radius > canvas.width)
             ? canvas.width - currentLevelData.ball.radius - 1
             : currentLevelData.ball.radius + 1;
-        wallHitSound?.play();
+        playSound(wallHitSound);
       }
       if (currentLevelData.ball.y - currentLevelData.ball.radius < 0) {
         currentLevelData.ball.angle = -currentLevelData.ball.angle;
         currentLevelData.ball.y = currentLevelData.ball.radius + 1;
-        wallHitSound?.play();
+        playSound(wallHitSound);
       }
 
       // Ball collision with paddle
@@ -362,7 +381,7 @@ const BrickBreaker: React.FC = () => {
           const newAngle = -Math.PI / 2 + normalizedPaddleCollisionPoint * maxBounceAngle;
           currentLevelData.ball.angle = newAngle;
           currentLevelData.ball.y = paddleTopY - currentLevelData.ball.radius - 1;
-          paddleHitSound?.play();
+          playSound(paddleHitSound);
       }
 
       // Ball out of bounds (Bottom) - Lose life
@@ -373,15 +392,14 @@ const BrickBreaker: React.FC = () => {
                   navigator.vibrate?.(200);
                   setTimeout(() => {
                       setIsVibrating(false);
+                      playSound(lifeLostSound);
                       setLives(prevLives => {
                           const newLives = prevLives - 1;
-                          if (newLives < 0) {
+                          if (newLives <= 0) {
                               setGameState("gameover");
-                              gameOverSound?.play();
                               return 0;
                           } else {
                               showMessage("ایک زندگی کم ہوگئی!");
-                              lifeLostSound?.play();
                               resetBallAndPaddlePosition(currentLevelData);
                               return newLives;
                           }
@@ -416,57 +434,78 @@ const BrickBreaker: React.FC = () => {
       document.removeEventListener("keyup", keyUpHandler, false);
       canvas?.removeEventListener("click", clickOrTouchHandler, false);
       canvas?.removeEventListener("touchstart", clickOrTouchHandler, false);
+      canvas?.removeEventListener("mousemove", mouseMoveHandler, false);
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
         animationFrameId.current = null;
       }
     };
      // Removed pauseGame, resumeGame, handleLevelChange from deps
-  }, [gameState, currentLevelData, lives, score, ballLaunched, level, levels, isVibrating, resetBallAndPaddlePosition, displayMessage, showMessage, handleLevelChange, pauseGame, resumeGame]); // Keep pauseGame/resumeGame/handleLevelChange here because keyDownHandler depends on them
+  }, [gameState, currentLevelData, lives, score, ballLaunched, level, levels, isVibrating, resetBallAndPaddlePosition, displayMessage, showMessage, handleLevelChange, pauseGame, resumeGame, playSound]); // Keep pauseGame/resumeGame/handleLevelChange here because keyDownHandler depends on them
 
 
   return (
-    <div className="flex flex-col items-center justify-center relative">
+    <div className="relative w-full max-w-5xl rounded-2xl border border-white/10 bg-slate-900/40 p-4 shadow-2xl backdrop-blur-md sm:p-6" dir="rtl">
       {/* Audio Elements */}
-      <audio ref={paddleHitSoundRef} src="/sounds/paddleHit.wav" preload="auto" />
-      <audio ref={brickBreakSoundRef} src="/sounds/brickBreak.wav" preload="auto" />
-      <audio ref={wallHitSoundRef} src="/sounds/wallHit.wav" preload="auto" />
-      <audio ref={lifeLostSoundRef} src="/sounds/lifeLost.wav" preload="auto" />
-      <audio ref={gameOverSoundRef} src="/sounds/gameOver.wav" preload="auto" />
+      <audio ref={paddleHitSoundRef} src="/sounds/paddleHit.ogg" preload="auto" />
+      <audio ref={brickBreakSoundRef} src="/sounds/brickBreak.ogg" preload="auto" />
+      <audio ref={wallHitSoundRef} src="/sounds/wallHit.ogg" preload="auto" />
+      <audio ref={lifeLostSoundRef} src="/sounds/lifeLost.ogg" preload="auto" />
+      <audio ref={gameOverSoundRef} src="/sounds/gameOver.ogg" preload="auto" />
+      <audio ref={gameStartSoundRef} src="/sounds/gameStart.ogg" preload="auto" />
+
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-white">
+        <div className="rounded-full border border-cyan-300/50 bg-cyan-500/15 px-4 py-1.5 text-sm font-semibold">
+          اسکور: {score}
+        </div>
+        <div className="rounded-full border border-fuchsia-300/50 bg-fuchsia-500/15 px-4 py-1.5 text-sm font-semibold">
+          زندگیاں: {lives}
+        </div>
+        <div className="rounded-full border border-amber-300/50 bg-amber-500/15 px-4 py-1.5 text-sm font-semibold">
+          لیول: {level}
+        </div>
+      </div>
 
       {/* Canvas */}
-      <canvas
-        ref={canvasRef}
-        width="640"
-        height="480"
-        className="border-2 border-gray-300 rounded-md bg-black"
-        tabIndex={0}
-       />
+      <div className="relative overflow-hidden rounded-xl border border-white/20 shadow-[0_0_40px_rgba(56,189,248,0.2)]">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-cyan-500/10 via-transparent to-fuchsia-500/10" />
+        <canvas
+          ref={canvasRef}
+          width="640"
+          height="480"
+          className="relative z-0 h-auto w-full bg-black"
+          tabIndex={0}
+        />
+      </div>
+
+      <div className="mt-4 rounded-xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-slate-200">
+        کنٹرولز: دائیں/بائیں تیر سے پیڈل چلائیں، اسپیس یا اسکرین ٹچ سے گیند لانچ کریں، اور P سے کھیل روکیں یا دوبارہ شروع کریں۔
+      </div>
 
        {/* Overlays for Start/Pause/Game Over */}
       {gameState === "start" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 text-white z-10">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/80 text-white">
           <h1 className="text-4xl font-bold mb-6">اینٹوں کا توڑ</h1>
-          <Button onClick={startGame} className="px-6 py-3 text-lg mb-4">کھیل شروع کریں</Button>
-          <div className="flex space-x-4">
+          <Button onClick={startGame} className="mb-4 bg-cyan-500 px-6 py-3 text-lg text-black hover:bg-cyan-400">کھیل شروع کریں</Button>
+          <div className="flex flex-wrap justify-center gap-3">
              {levels.map((_, index) => (
-                <Button key={index} onClick={() => handleLevelChange(index + 1)}>لیول {index + 1}</Button>
+                <Button key={index} onClick={() => handleLevelChange(index + 1)} className="bg-fuchsia-600 hover:bg-fuchsia-500">لیول {index + 1}</Button>
              ))}
           </div>
         </div>
       )}
       {gameState === "paused" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white z-10">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 text-white">
           <h1 className="text-3xl font-bold mb-4">موقوف</h1>
-          <Button onClick={resumeGame} className="mb-2">دوبارہ شروع کریں</Button>
-          <Button onClick={resetGame}>دوبارہ شروع کریں</Button>
+          <Button onClick={resumeGame} className="mb-2 bg-cyan-500 text-black hover:bg-cyan-400">کھیل جاری رکھیں</Button>
+          <Button onClick={resetGame} className="bg-fuchsia-600 hover:bg-fuchsia-500">نیا کھیل شروع کریں</Button>
         </div>
       )}
       {gameState === "gameover" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-75 text-white z-10">
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/75 text-white">
           <h1 className="text-4xl font-bold mb-4">گیم ختم</h1>
           <p className="text-xl mb-4">آپ کا سکور: {score}</p>
-          <Button onClick={resetGame}>دوبارہ شروع کریں</Button>
+          <Button onClick={resetGame} className="bg-cyan-500 text-black hover:bg-cyan-400">دوبارہ کھیلیں</Button>
         </div>
       )}
     </div>
